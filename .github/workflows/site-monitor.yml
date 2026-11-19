@@ -1,0 +1,29 @@
+name: Site monitor
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site-monitor
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/monitor.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # One retry after 60 s so a single network blip does not page anyone.
+      - name: Check sites + CRM intake (dry run)
+        run: node scripts/monitor.mjs || (echo "Retrying in 60s..." && sleep 60 && node scripts/monitor.mjs)
